@@ -14,20 +14,33 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.flag.FeatureFlags;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Main entrypoint class.
  */
+@Mod(Reference.MOD_ID)
 public class Terrastorage implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(Reference.MOD_ID);
 	private boolean populatedItemGroups = false;
 	public static boolean environmentIsServer;
 	public static boolean itemFavoritingEnabled = false;
+
+	public Terrastorage(ModContainer modContainer, IEventBus bus) {
+		onInitialize();
+		if (FMLLoader.getDist() == Dist.CLIENT) {
+			new TerrastorageClient().onInitializeClient();
+		}
+	}
 
 	/**
 	 * Executes various tasks while Terrastorage is initializing.
@@ -56,7 +69,7 @@ public class Terrastorage implements ModInitializer {
 			}
 
 			// Forcing the population of item groups.
-			ItemGroups.updateDisplayContext(FeatureFlags.DEFAULT_ENABLED_FEATURES, false, listener.getRegistryManager());
+			CreativeModeTabs.tryRebuildTabContents(FeatureFlags.DEFAULT_FLAGS, false, listener.registryAccess());
 			ItemGroupCache.init();
 
 			populatedItemGroups = true;

@@ -11,6 +11,20 @@
 		"LockableContainerBlockEntityAccessor",
 		"ScreenHandlerMixin"
 	],
+	"client": [
+		"client.BlockEntityRenderDispatcherMixin",
+		"client.BlockEntityRendererFactoriesMixin",
+		"client.BlockEntityTypeAccessor",
+		"client.ClientPlayerEntityMixin",
+		"client.CreativeInventoryScreenMixin",
+		"client.GenericContainerScreenAccessor",
+		"client.HandledScreenMixin",
+		"client.InGameHudMixin",
+		"client.InventoryScreenMixin",
+		"client.ItemStackMixin",
+		"client.PressableWidgetAccessor",
+		"client.SliderWidgetAccessor"
+	],
 	"injectors": {
 		"defaultRequire": 1
 	}

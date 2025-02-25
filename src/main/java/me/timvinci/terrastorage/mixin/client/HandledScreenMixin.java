@@ -1,0 +1,255 @@
+package me.timvinci.terrastorage.mixin.client;
+
+import me.timvinci.terrastorage.api.ItemFavoritingUtils;
+import me.timvinci.terrastorage.config.client.ClientConfigManager;
+import me.timvinci.terrastorage.client.gui.TerrastorageOptionsScreen;
+import me.timvinci.terrastorage.client.gui.widget.StorageButtonCreator;
+import me.timvinci.terrastorage.client.keybinding.TerrastorageKeybindings;
+import me.timvinci.terrastorage.network.ClientNetworkHandler;
+import me.timvinci.terrastorage.util.*;
+import me.timvinci.terrastorage.client.gui.widget.StorageButtonWidget;
+import me.timvinci.terrastorage.util.client.*;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.Button;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+
+/**
+ * A mixin of the AbstractContainerScreen class, adds the storage option buttons to storage screens, and provides item favoriting
+ * support.
+ * @param <T> The screen handler type.
+ */
+@Mixin(AbstractContainerScreen.class )
+public abstract class HandledScreenMixin<T extends AbstractContainerMenu> extends Screen {
+    @Unique
+    private final ResourceLocation favoriteBorder = ResourceLocation.fromNamespaceAndPath(Reference.MOD_ID, "textures/gui/sprites/favorite_border.png");
+    @Shadow
+    protected T menu;
+    @Shadow protected int imageWidth;
+    @Shadow protected int imageHeight;
+    @Shadow protected int leftPos;
+    @Shadow protected int topPos;
+    @Shadow @Nullable
+    protected Slot hoveredSlot;
+
+    protected HandledScreenMixin(Component title) {
+        super(title);
+    }
+
+    /**
+     * Adds the storage option buttons once the handled screen is initializing.
+     */
+    @Inject(method = "init", at = @At("TAIL"))
+    private void onInit(CallbackInfo ci) {
+        // Return if the player is in spectator mode, or if the handled screen is that of the player's inventory.
+        if (Minecraft.getInstance().player.isSpectator() ||
+            menu instanceof CreativeModeInventoryScreen.ItemPickerMenu ||
+            menu instanceof InventoryMenu) {
+            return;
+        }
+
+        // Check if the handled screen is a storage.
+        // Primary check scans for a non player slot with an inventory size of at least 27.
+        // Secondary check counts the amount of non player slots and is for screen handlers whose slots list doesn't
+        // provide a proper reference to the inventory.
+        boolean largeNonPlayerInventory = false;
+        int nonPlayerSlotCount = 0;
+        for (Slot slot : menu.slots) {
+            if (!(slot.container instanceof Inventory)) {
+                if (slot.container.getContainerSize() >= 27) {
+                    largeNonPlayerInventory = true;
+                    break;
+                }
+
+                nonPlayerSlotCount++;
+            }
+        }
+
+        // If both checks fail, this is (most very likely) not a storage.
+        if (!largeNonPlayerInventory && nonPlayerSlotCount < 27) {
+            return;
+        }
+
+        boolean isEnderChest = menu instanceof ChestMenu && this.getTitle().equals(Component.translatable("container.enderchest"));
+        StorageAction[] buttonActions = StorageAction.getButtonsActions(isEnderChest);
+
+        ButtonsStyle buttonsStyle = ClientConfigManager.getInstance().getConfig().getButtonsStyle();
+        // Set the buttons offset.
+        int buttonsXOffset = ClientConfigManager.getInstance().getConfig().getButtonsXOffset();
+        int buttonsYOffset = ClientConfigManager.getInstance().getConfig().getButtonsYOffset();
+
+        // Set the button dimensions and vertical spacing.
+        int buttonsWidth = ClientConfigManager.getInstance().getConfig().getButtonsWidth();
+        int buttonsHeight = ClientConfigManager.getInstance().getConfig().getButtonsHeight();
+        int buttonsSpacing = ClientConfigManager.getInstance().getConfig().getButtonsSpacing();
+
+        // Place the buttons on the side of the container gui.
+        int buttonX = ClientConfigManager.getInstance().getConfig().getButtonsPlacement() == ButtonsPlacement.RIGHT?
+                this.leftPos + this.imageWidth + 5 + buttonsXOffset :
+                this.leftPos - ((buttonsStyle == ButtonsStyle.DEFAULT ? buttonsWidth : 70) + 5) + buttonsXOffset;
+        // Get the height of the container, excluding the player's inventory portion whose height is 94.
+        int containerHeight = this.imageHeight - 94;
+        int buttonSectionHeight = buttonActions.length * buttonsHeight + (buttonActions.length-1) * buttonsSpacing;
+        // Centering the buttons vertically alongside the container gui.
+        int buttonY = this.topPos - (buttonSectionHeight - containerHeight) / 2 + buttonsYOffset;
+
+        if (ClientConfigManager.getInstance().getConfig().getButtonsTooltip()) {
+            for (StorageAction storageAction : buttonActions) {
+                Component buttonText = LocalizedTextProvider.buttonTextCache.get(storageAction);
+                Tooltip buttonTooltip = LocalizedTextProvider.buttonTooltipCache.get(storageAction);
+                StorageButtonWidget storageButton = StorageButtonCreator.createStorageButton(storageAction, buttonX, buttonY, buttonsWidth, buttonsHeight, buttonText, buttonsStyle);
+                storageButton.setTooltip(buttonTooltip);
+
+                this.addRenderableWidget(storageButton);
+                buttonY += buttonsHeight + buttonsSpacing;
+            }
+        }
+        else {
+            for (StorageAction storageAction : buttonActions) {
+                Component buttonText = LocalizedTextProvider.buttonTextCache.get(storageAction);
+                StorageButtonWidget storageButton = StorageButtonCreator.createStorageButton(storageAction, buttonX, buttonY, buttonsWidth, buttonsHeight, buttonText, buttonsStyle);
+
+                this.addRenderableWidget(storageButton);
+                buttonY += buttonsHeight + buttonsSpacing;
+            }
+        }
+
+        // Add the options buttons if it is enabled.
+        if (ClientConfigManager.getInstance().getConfig().getDisplayOptionsButton()) {
+            int optionsButtonX = (this.width - 120) / 2;
+            int optionsButtonY = this.topPos - 20;
+            Button optionsButtonWidget = Button.builder(
+                            Component.translatable("terrastorage.button.options"),
+                            onPress -> {
+                                minecraft.execute(() -> {
+                                    minecraft.setScreen(new TerrastorageOptionsScreen(minecraft.screen));
+                                });
+                            })
+                    .size(120, 15)
+                    .pos(optionsButtonX, optionsButtonY)
+                    .build();
+            optionsButtonWidget.setTooltip(Tooltip.create(Component.translatable("terrastorage.button.tooltip.options")));
+
+            this.addRenderableWidget(optionsButtonWidget);
+        }
+    }
+
+    /**
+     * Provides the ability to favorite items stacks.
+     */
+    @Inject(method = "mouseClicked",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/Util;getMillis()J"),
+            locals = LocalCapture.CAPTURE_FAILEXCEPTION, cancellable = true)
+    private void mouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir, InputConstants.Key mouseKey, boolean bl, Slot slot) {
+        if (button != 0 || slot == null || !slot.hasItem() || !menu.getCarried().isEmpty()) {
+            return;
+        }
+
+        boolean modifierIsPressed = InputConstants.isKeyDown(minecraft.getWindow().getWindow(), KeyBindingHelper.getBoundKeyOf(TerrastorageKeybindings.favoriteItemModifier).getValue());
+        boolean playerOwnedSlot = slot.container instanceof Inventory;
+
+        if (modifierIsPressed && playerOwnedSlot) {
+            ItemStack slotStack = slot.getItem();
+            int slotId = this.menu instanceof CreativeModeInventoryScreen.ItemPickerMenu ? slot.getContainerSlot() : slot.index;
+            boolean toggledValue = !ItemFavoritingUtils.isFavorite(slotStack);
+            if (ClientNetworkHandler.sendItemFavoritedPayload(slotId, toggledValue)) {
+                ItemFavoritingUtils.setFavorite(slotStack, toggledValue);
+            }
+
+            cir.setReturnValue(true);
+            cir.cancel();
+        }
+    }
+
+    /**
+     * Provides the ability to sort inventories through the sort inventory keybind.
+     * Injected at TAIL to allow any other logic related to the same keybind to happen before the sorting.
+     */
+    @Inject(method = "mouseClicked", at = @At("TAIL"), locals = LocalCapture.CAPTURE_FAILEXCEPTION)
+    private void mouseClickedTail(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir, InputConstants.Key mouseKey, boolean bl, Slot slot) {
+        if (slot == null || slot.container.getContainerSize() < 27) {
+            return;
+        }
+
+        if (TerrastorageKeybindings.sortInventoryBind.matchesMouse(button)) {
+            ClientNetworkHandler.sendSortPayload(slot.container instanceof Inventory);
+        }
+    }
+
+    /**
+     * Calls the ScreenInteractionUtils to process a slot click.
+     */
+    @Inject(method = "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V", at = @At("HEAD"), cancellable = true)
+    private void onMouseClick(Slot slot, int slotId, int button, ClickType actionType, CallbackInfo ci) {
+        ScreenInteractionUtils.processSlotClick(this.minecraft, this.menu.getCarried(), slot, slotId, button, actionType, ci);
+    }
+
+    /**
+     * Provides the ability to sort inventories through the sort inventory keybind.
+     * Injected at TAIL to allow any other logic related to the same keybind to happen before the sorting.
+     */
+    @Inject(method = "keyPressed", at = @At("TAIL"))
+    private void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+        if (hoveredSlot == null || hoveredSlot.container.getContainerSize() < 27) {
+            return;
+        }
+
+        if (TerrastorageKeybindings.sortInventoryBind.matches(keyCode, scanCode)) {
+            ClientNetworkHandler.sendSortPayload(hoveredSlot.container instanceof Inventory);
+        }
+    }
+
+    /**
+     * Draws the favorite border on slots that hold a favorite item stack.
+     * Icy: basically is renderSlot method, but neoforge recode that and extract out to renderSlotContents?
+     */
+    @Inject(method = "renderSlotContents",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphics;renderItemDecorations(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;IILjava/lang/String;)V",
+                    shift = At.Shift.BEFORE),
+            locals = LocalCapture.CAPTURE_FAILEXCEPTION)
+    private void drawSlot(GuiGraphics context, ItemStack itemStack, Slot slot, String countString, CallbackInfo ci, GuiGraphics _guiGraphics, Slot _slot, String _countString, int i, int j) {
+        if (!(slot.container instanceof Inventory) || !ItemFavoritingUtils.isFavorite(itemStack)) {
+            return;
+        }
+
+        BorderVisibility borderVisibility = ClientConfigManager.getInstance().getConfig().getBorderVisibility();
+        if (borderVisibility == BorderVisibility.NEVER) {
+            return;
+        }
+
+        boolean needsModifierPressed = borderVisibility == BorderVisibility.ON_PRESS || borderVisibility == BorderVisibility.ON_PRESS_NON_HOTBAR;
+
+        if (!needsModifierPressed || InputConstants.isKeyDown(minecraft.getWindow().getWindow(),
+                KeyBindingHelper.getBoundKeyOf(TerrastorageKeybindings.favoriteItemModifier).getValue())) {
+            context.blit(favoriteBorder, i, j, 0, 0, 16, 16, 16, 16);
+        }
+    }
+}

@@ -1,19 +1,19 @@
 package me.timvinci.terrastorage.mixin;
 
-import net.minecraft.block.entity.LockableContainerBlockEntity;
-import net.minecraft.text.Text;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 /**
- * A mixin accessor for the LockableContainerBlockEntity class.
+ * A mixin accessor for the BaseContainerBlockEntity class.
  */
-@Mixin(LockableContainerBlockEntity.class)
+@Mixin(BaseContainerBlockEntity.class)
 public interface LockableContainerBlockEntityAccessor {
-    @Accessor("customName")
-    void setCustomName(Text customName);
+    @Accessor("name")
+    void setCustomName(Component customName);
 
-    @Invoker("getContainerName")
-    Text invokeGetContainerName();
+    @Invoker("getDefaultName")
+    Component invokeGetContainerName();
 }

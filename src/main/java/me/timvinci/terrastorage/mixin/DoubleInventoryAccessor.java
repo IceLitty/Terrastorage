@@ -1,19 +1,19 @@
 package me.timvinci.terrastorage.mixin;
 
-import net.minecraft.inventory.DoubleInventory;
-import net.minecraft.inventory.Inventory;
+import net.minecraft.world.CompoundContainer;
+import net.minecraft.world.Container;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /**
- * A mixin accessor for the DoubleInventory class.
+ * A mixin accessor for the CompoundContainer class.
  */
-@Mixin(DoubleInventory.class)
+@Mixin(CompoundContainer.class)
 public interface DoubleInventoryAccessor {
 
-    @Accessor("first")
-    Inventory first();
+    @Accessor("container1")
+    Container first();
 
-    @Accessor("second")
-    Inventory second();
+    @Accessor("container2")
+    Container second();
 }

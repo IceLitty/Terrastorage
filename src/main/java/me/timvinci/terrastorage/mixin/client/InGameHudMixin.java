@@ -1,0 +1,63 @@
+package me.timvinci.terrastorage.mixin.client;
+
+import me.timvinci.terrastorage.api.ItemFavoritingUtils;
+import me.timvinci.terrastorage.config.client.ClientConfigManager;
+import me.timvinci.terrastorage.client.keybinding.TerrastorageKeybindings;
+import me.timvinci.terrastorage.util.client.BorderVisibility;
+import me.timvinci.terrastorage.util.Reference;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.DeltaTracker;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/**
+ * A mixin of the Gui class, used for adding item favoriting support.
+ */
+@Mixin(Gui.class)
+public class InGameHudMixin {
+    @Unique
+    private final ResourceLocation favoriteBorder = ResourceLocation.fromNamespaceAndPath(Reference.MOD_ID, "textures/gui/sprites/favorite_border.png");
+    @Shadow
+    private Minecraft minecraft;
+
+    /**
+     * Draws the favorite border on hotbar slots that hold favorite item stacks.
+     */
+    @Inject(method = "renderSlot",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphics;renderItemDecorations(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
+                    shift = At.Shift.BEFORE))
+    private void onRenderHotbarItem(GuiGraphics context, int x, int y, DeltaTracker tickCounter, Player player, ItemStack stack, int seed, CallbackInfo ci) {
+        if (!ItemFavoritingUtils.isFavorite(stack)) {
+            return;
+        }
+
+        BorderVisibility borderVisibility = ClientConfigManager.getInstance().getConfig().getBorderVisibility();
+
+        if (borderVisibility == BorderVisibility.NEVER || borderVisibility == BorderVisibility.NON_HOTBAR ||
+            borderVisibility == BorderVisibility.ON_PRESS_NON_HOTBAR) {
+            return;
+        }
+
+        // If border visibility is set to ON_PRESS, only render if the key is pressed
+        if (borderVisibility == BorderVisibility.ON_PRESS &&
+            !InputConstants.isKeyDown(minecraft.getWindow().getWindow(),
+                        KeyBindingHelper.getBoundKeyOf(TerrastorageKeybindings.favoriteItemModifier).getValue())) {
+            return;
+        }
+
+        context.blit(favoriteBorder, x, y, 0, 0, 16, 16, 16, 16);
+    }
+}
