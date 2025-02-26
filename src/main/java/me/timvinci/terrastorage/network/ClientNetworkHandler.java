@@ -23,7 +23,7 @@ public class ClientNetworkHandler {
 
     public static void sendActionPayload(StorageAction action) {
         if (!canSendPayload(StorageActionPayload.ID) ||
-                action != StorageAction.QUICK_STACK_TO_NEARBY && Minecraft.getInstance().player.containerMenu == null) {
+                action != StorageAction.QUICK_STACK_TO_NEARBY && action != StorageAction.RESTOCK_FROM_NEARBY && Minecraft.getInstance().player.containerMenu == null) {
             return;
         }
 
@@ -40,6 +40,12 @@ public class ClientNetworkHandler {
                         action,
                         ClientConfigManager.getInstance().getConfig().getHotbarProtection(),
                         Optional.of(ClientConfigManager.getInstance().getConfig().getNearbyQuickStackMode() == QuickStackMode.SMART_DEPOSIT)
+                );
+                case RESTOCK_FROM_NEARBY -> new StorageActionPayload(
+                        Optional.empty(),
+                        action,
+                        false,
+                        Optional.empty()
                 );
                 default -> new StorageActionPayload(
                         Optional.of(getSyncId()),

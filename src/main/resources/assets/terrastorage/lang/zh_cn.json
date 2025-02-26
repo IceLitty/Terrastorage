@@ -78,6 +78,8 @@
   "terrastorage.keybinding.categories.main": "Terrastorage",
   "terrastorage.keybinding.favorite_item_modifier": "收藏物品 (+ 左键点击)",
   "terrastorage.keybinding.sort_inventory_bind": "整理背包 (悬停槽位)",
+  "terrastorage.keybinding.quick_stack_to_nearby_bind": "快速堆叠至附近的储存",
+  "terrastorage.keybinding.restock_from_nearby_bind": "从附近的储存补货",
   "terrastorage.item.tooltip.favorite": "标记为收藏",
   "terrastorage.message.client_saving_error": "保存失败，请检查并验证你的客户端配置文件，与此错误相关的信息已输出到此会话的日志文件中。",
   "terrastorage.message.server_saving_error": "保存失败，请检查并验证你的服务器配置文件，与此错误相关的信息已输出到此会话的日志/控制台中。",

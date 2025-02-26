@@ -58,7 +58,11 @@ public record StorageActionPayload(
      * @param smartDepositMode Whether the player's quick stack mode is 'smart deposit'.
      */
     public static void receive(ServerPlayer player, Optional<Integer> syncId, StorageAction action, boolean hotbarProtection, Optional<Boolean> smartDepositMode) {
-        if (action != StorageAction.QUICK_STACK_TO_NEARBY) {
+        if (action == StorageAction.QUICK_STACK_TO_NEARBY) {
+            TerrastorageCore.quickStackToNearbyStorages(player, hotbarProtection, smartDepositMode.get());
+        } else if (action == StorageAction.RESTOCK_FROM_NEARBY) {
+            TerrastorageCore.restockFromNearbyStorages(player, hotbarProtection);
+        } else {
             if (player.containerMenu == null || player.containerMenu.containerId != syncId.get()) {
                 return;
             }
@@ -91,9 +95,6 @@ public record StorageActionPayload(
                 case RESTOCK -> TerrastorageCore.restock(player.getInventory(), storageInventory, hotbarProtection);
                 default -> throw new IllegalArgumentException("Unknown storage action: " + action);
             }
-        }
-        else {
-            TerrastorageCore.quickStackToNearbyStorages(player, hotbarProtection, smartDepositMode.get());
         }
     }
 }

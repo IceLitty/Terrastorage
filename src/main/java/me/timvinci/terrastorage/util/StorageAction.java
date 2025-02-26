@@ -12,11 +12,12 @@ public enum StorageAction {
     RESTOCK,
     SORT_ITEMS,
     RENAME,
-    QUICK_STACK_TO_NEARBY;
+    QUICK_STACK_TO_NEARBY,
+    RESTOCK_FROM_NEARBY;
 
     public static StorageAction[] getButtonsActions(boolean isEnderChest) {
         StorageAction[] allActions = values();
-        return Arrays.copyOf(allActions, allActions.length - (isEnderChest ? 2 : 1));
+        return Arrays.copyOf(allActions, allActions.length - (isEnderChest ? 3 : 2));
     }
 }
 

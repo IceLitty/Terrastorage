@@ -400,6 +400,42 @@ public class InventoryUtils {
     }
 
     /**
+     * Triggers the item animation that occurs after Restock From Nearby Storages is used.
+     * @param world The server world.
+     * @param playerEyes The position of the player's eyes.
+     * @param animationMap An animation map consisting of target positions and lists of items.
+     */
+    public static void triggerFlyInAnimation(ServerLevel world, Vec3 playerEyes, int itemAnimationLength, Map<Vec3, ArrayList<Item>> animationMap) {
+        int itemAnimationInterval = ConfigManager.getInstance().getConfig().getItemAnimationInterval();
+
+        for (Map.Entry<Vec3, ArrayList<Item>> entry : animationMap.entrySet()) {
+            Vec3 targetPos = entry.getKey();
+            Vec3 itemVelocity = new Vec3(
+                    (playerEyes.x - targetPos.x) / itemAnimationLength,
+                    (playerEyes.y - targetPos.y) / itemAnimationLength,
+                    (playerEyes.z - targetPos.z) / itemAnimationLength
+            );
+            ArrayList<Item> items = entry.getValue();
+
+            for (int i = 0; i < items.size(); i++) {
+                int movementDelay = i * itemAnimationInterval;
+                GhostItemEntity ghostItem = new GhostItemEntity(
+                        world,
+                        targetPos.x,
+                        targetPos.y,
+                        targetPos.z,
+                        items.get(i).getDefaultInstance(),
+                        itemVelocity,
+                        itemAnimationLength,
+                        movementDelay
+                );
+
+                world.addFreshEntity(ghostItem);
+            }
+        }
+    }
+
+    /**
      * This method acts similarly to the original ItemStack.isSameItemSameComponents, but it will also return true
      * for any two item stacks whose only component difference is one being favorite while the other isn't.
      */

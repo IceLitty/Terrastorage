@@ -311,4 +311,48 @@ public class TerrastorageCore {
             InventoryUtils.triggerFlyOutAnimation(player.serverLevel(), player.getEyePosition(), itemAnimationLength, animationMap);
         }
     }
+
+    /**
+     * Attempts to loot all the items of the storage that can stack with existing items of the player, from the storage
+     * to the player.
+     * @param player The player who initiated the operation.
+     * @param hotbarProtection The hotbar protection value of the player.
+     */
+    public static void restockFromNearbyStorages(ServerPlayer player, boolean hotbarProtection) {
+        List<Tuple<Container, Vec3>> nearbyStorages = InventoryUtils.getNearbyStorages(player);
+        if (nearbyStorages.isEmpty()) {
+            return;
+        }
+        Map<Vec3, ArrayList<Item>> animationMap = new HashMap<>();
+        Inventory playerInventory = player.getInventory();
+        // Create an inventory state from the player's inventory.
+        CompactInventoryState playerInventoryState = new CompactInventoryState(playerInventory, hotbarProtection);
+        for (Tuple<Container, Vec3> storagePair : nearbyStorages) {
+            Container storage = storagePair.getA();
+            Vec3 storagePos = storagePair.getB();
+            Set<Item> addAnimationItems = new HashSet<>();
+            for (int i = 0; i < storage.getContainerSize(); i++) {
+                ItemStack storageStack = storage.getItem(i);
+                if (storageStack.isEmpty() || !playerInventoryState.getNonFullItemSlots().containsKey(new StackIdentifier(storageStack))) {
+                    continue;
+                }
+                Item playerItem = storageStack.getItem();
+                if (InventoryUtils.transferToExistingStack(playerInventory, playerInventoryState, storageStack)) {
+                    addAnimationItems.add(playerItem);
+                }
+            }
+            for (Item animationItem : addAnimationItems) {
+                animationMap.computeIfAbsent(storagePos, k -> new ArrayList<>()).add(animationItem);
+            }
+            if (playerInventoryState.wasModified()) {
+                playerInventory.setChanged();
+                storage.setChanged();
+            }
+        }
+        int itemAnimationLength = ConfigManager.getInstance().getConfig().getItemAnimationLength();
+        if (itemAnimationLength != 0) {
+            InventoryUtils.triggerFlyInAnimation(player.serverLevel(), player.getEyePosition(), itemAnimationLength, animationMap);
+        }
+    }
+
 }

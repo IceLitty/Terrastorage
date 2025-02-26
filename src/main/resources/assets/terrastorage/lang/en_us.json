@@ -78,6 +78,8 @@
   "terrastorage.keybinding.categories.main": "Terrastorage",
   "terrastorage.keybinding.favorite_item_modifier": "Favorite Item (+ Left Click)",
   "terrastorage.keybinding.sort_inventory_bind": "Sort Inventory (Of Hovered Slot)",
+  "terrastorage.keybinding.quick_stack_to_nearby_bind": "Quick Stack to Nearby Chests",
+  "terrastorage.keybinding.restock_from_nearby_bind": "Restock from Nearby Chests",
   "terrastorage.item.tooltip.favorite": "Marked as favorite",
   "terrastorage.message.client_saving_error": "Saving failed, please check and validate your client configuration file, the info related to this error was outputted to this session's log file.",
   "terrastorage.message.server_saving_error": "Saving failed, please check and validate your server configuration file, the info related to this error was outputted to this session's log/console.",
