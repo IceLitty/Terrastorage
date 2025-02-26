@@ -51,7 +51,7 @@ public class TerrastorageKeybindings {
                 KeyConflictContext.IN_GAME,
                 KeyModifier.SHIFT,
                 InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_T,
+                GLFW.GLFW_KEY_F,
                 "terrastorage.keybinding.categories.main"
         );
 
