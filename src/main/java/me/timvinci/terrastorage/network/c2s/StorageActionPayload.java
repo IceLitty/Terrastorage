@@ -62,7 +62,7 @@ public record StorageActionPayload(
      */
     public static void receive(ServerPlayer player, Optional<Integer> syncId, StorageAction action, boolean hotbarProtection, Optional<Boolean> smartDepositMode, Optional<List<Integer>> lockedSlots) {
         if (action == StorageAction.QUICK_STACK_TO_NEARBY) {
-            TerrastorageCore.quickStackToNearbyStorages(player, hotbarProtection, smartDepositMode.get(), lockedSlots.get());
+            TerrastorageCore.quickStackToNearbyStorages(player, hotbarProtection, smartDepositMode.get(), lockedSlots.orElse(null));
         } else if (action == StorageAction.RESTOCK_FROM_NEARBY) {
             TerrastorageCore.restockFromNearbyStorages(player, hotbarProtection);
         } else {
@@ -93,8 +93,8 @@ public record StorageActionPayload(
 
             switch (action) {
                 case LOOT_ALL -> TerrastorageCore.lootAll(player.getInventory(), storageInventory, hotbarProtection);
-                case DEPOSIT_ALL -> TerrastorageCore.depositAll(player.getInventory(), storageInventory, firstSlot, hotbarProtection, lockedSlots.get());
-                case QUICK_STACK -> TerrastorageCore.quickStack(player.getInventory(), storageInventory, hotbarProtection, smartDepositMode.get(), lockedSlots.get());
+                case DEPOSIT_ALL -> TerrastorageCore.depositAll(player.getInventory(), storageInventory, firstSlot, hotbarProtection, lockedSlots.orElse(null));
+                case QUICK_STACK -> TerrastorageCore.quickStack(player.getInventory(), storageInventory, hotbarProtection, smartDepositMode.get(), lockedSlots.orElse(null));
                 case RESTOCK -> TerrastorageCore.restock(player.getInventory(), storageInventory, hotbarProtection);
                 default -> throw new IllegalArgumentException("Unknown storage action: " + action);
             }

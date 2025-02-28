@@ -58,7 +58,7 @@ public record SortPayload(
     public static void receive(ServerPlayer player, Optional<Integer> syncId, SortType type, Optional<Boolean> hotbarProtection, Optional<List<Integer>> lockedSlots) {
         if (hotbarProtection.isPresent()) {
             // Player inventory sorting.
-            TerrastorageCore.sortPlayerItems(player.getInventory(), type, hotbarProtection.get(), lockedSlots.isPresent() ? lockedSlots.get() : null);
+            TerrastorageCore.sortPlayerItems(player.getInventory(), type, hotbarProtection.get(), lockedSlots.orElse(null));
         }
         else {
             // Storage sorting.
