@@ -53,6 +53,9 @@ public class Terrastorage implements ModInitializer {
 		if (FabricLoader.getInstance().isModLoaded("expandedstorage")) {
 			InventoryUtils.expandedStorageLoaded = true;
 		}
+		if (FabricLoader.getInstance().isModLoaded("inventoryprofilesnext")) {
+			InventoryUtils.inventoryProfilesNextLoaded = true;
+		}
 
 		ConfigManager.init();
 		TerrastorageCommands.registerCommands();

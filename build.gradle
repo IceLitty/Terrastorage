@@ -65,6 +65,10 @@ repositories {
 	maven { url "https://maven.shedaniel.me/" }
 	maven { url "https://maven.su5ed.dev/releases" } // forgified fabric api
 	maven {
+		name "ipnRepositoryReleases"
+		url "https://maven.ipn-mod.org/releases"
+	}
+	maven {
 		url "https://cursemaven.com"
 		content {
 			includeGroup "curse.maven"
@@ -106,6 +110,9 @@ dependencies {
 
 	// Expanded Storage compatibility.
 	compileOnly "curse.maven:expanded-storage-978068:${project.expanded_storage_version}"
+    // Inventory Profiles Next compatibility.
+	compileOnly "org.anti_ad.mc:libIPN-neoforge-1.21:6.0.0:dev"
+	compileOnly "org.anti_ad.mc:InventoryProfilesNext-neoforge-1.21:2.0.3"
 }
 
 tasks.register("extractNightConfig", Copy) {

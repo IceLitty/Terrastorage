@@ -3,6 +3,7 @@ package me.timvinci.terrastorage.network;
 import me.timvinci.terrastorage.config.client.ClientConfigManager;
 import me.timvinci.terrastorage.config.client.ServerConfigHolder;
 import me.timvinci.terrastorage.network.c2s.*;
+import me.timvinci.terrastorage.util.client.InventorySlotLockUtils;
 import me.timvinci.terrastorage.util.client.LocalizedTextProvider;
 import me.timvinci.terrastorage.util.client.QuickStackMode;
 import me.timvinci.terrastorage.util.StorageAction;
@@ -33,24 +34,35 @@ public class ClientNetworkHandler {
                         Optional.of(getSyncId()),
                         action,
                         ClientConfigManager.getInstance().getConfig().getHotbarProtection(),
-                        Optional.of(ClientConfigManager.getInstance().getConfig().getStorageQuickStackMode() == QuickStackMode.SMART_DEPOSIT)
+                        Optional.of(ClientConfigManager.getInstance().getConfig().getStorageQuickStackMode() == QuickStackMode.SMART_DEPOSIT),
+                        InventorySlotLockUtils.getCurrentSlotsLocked()
                 );
                 case QUICK_STACK_TO_NEARBY -> new StorageActionPayload(
                         Optional.empty(),
                         action,
                         ClientConfigManager.getInstance().getConfig().getHotbarProtection(),
-                        Optional.of(ClientConfigManager.getInstance().getConfig().getNearbyQuickStackMode() == QuickStackMode.SMART_DEPOSIT)
+                        Optional.of(ClientConfigManager.getInstance().getConfig().getNearbyQuickStackMode() == QuickStackMode.SMART_DEPOSIT),
+                        InventorySlotLockUtils.getCurrentSlotsLocked()
                 );
                 case RESTOCK_FROM_NEARBY -> new StorageActionPayload(
                         Optional.empty(),
                         action,
                         false,
+                        Optional.empty(),
                         Optional.empty()
+                );
+                case DEPOSIT_ALL -> new StorageActionPayload(
+                        Optional.of(getSyncId()),
+                        action,
+                        ClientConfigManager.getInstance().getConfig().getHotbarProtection(),
+                        Optional.empty(),
+                        InventorySlotLockUtils.getCurrentSlotsLocked()
                 );
                 default -> new StorageActionPayload(
                         Optional.of(getSyncId()),
                         action,
                         ClientConfigManager.getInstance().getConfig().getHotbarProtection(),
+                        Optional.empty(),
                         Optional.empty()
                 );
             };
@@ -73,11 +85,13 @@ public class ClientNetworkHandler {
                     new SortPayload(
                             Optional.empty(),
                             ClientConfigManager.getInstance().getConfig().getSortType(),
-                            Optional.of(ClientConfigManager.getInstance().getConfig().getHotbarProtection())
+                            Optional.of(ClientConfigManager.getInstance().getConfig().getHotbarProtection()),
+                            InventorySlotLockUtils.getCurrentSlotsLocked()
                     ) :
                     new SortPayload(
                             Optional.of(getSyncId()),
                             ClientConfigManager.getInstance().getConfig().getSortType(),
+                            Optional.empty(),
                             Optional.empty()
                     );
 

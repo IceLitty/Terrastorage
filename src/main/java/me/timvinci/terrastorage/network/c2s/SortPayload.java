@@ -27,7 +27,8 @@ import java.util.Optional;
 public record SortPayload(
         Optional<Integer> syncId,
         SortType sortType,
-        Optional<Boolean> hotbarProtection
+        Optional<Boolean> hotbarProtection,
+        Optional<List<Integer>> lockedSlots
 ) implements CustomPacketPayload {
     public static final Type<SortPayload> ID = new Type<>(ResourceLocation.fromNamespaceAndPath(Reference.MOD_ID, "sort_action"));
     public static final StreamCodec<FriendlyByteBuf, SortPayload> storageSortCodec = StreamCodec.ofMember(
@@ -35,11 +36,13 @@ public record SortPayload(
                 buf.writeOptional(value.syncId, FriendlyByteBuf::writeInt);
                 buf.writeEnum(value.sortType);
                 buf.writeOptional(value.hotbarProtection, FriendlyByteBuf::writeBoolean);
+                buf.writeOptional(value.lockedSlots, (_buf, list) -> _buf.writeCollection(list, FriendlyByteBuf::writeVarInt));
             },
             buf -> new SortPayload(
                     buf.readOptional(FriendlyByteBuf::readInt),
                     buf.readEnum(SortType.class),
-                    buf.readOptional(FriendlyByteBuf::readBoolean)
+                    buf.readOptional(FriendlyByteBuf::readBoolean),
+                    buf.readOptional(_buf -> _buf.readList(FriendlyByteBuf::readVarInt))
             )
     );
     @Override
@@ -52,10 +55,10 @@ public record SortPayload(
      * @param type The sorting type of the player.
      * @param hotbarProtection The hotbar protection value of the player.
      */
-    public static void receive(ServerPlayer player, Optional<Integer> syncId, SortType type, Optional<Boolean> hotbarProtection) {
+    public static void receive(ServerPlayer player, Optional<Integer> syncId, SortType type, Optional<Boolean> hotbarProtection, Optional<List<Integer>> lockedSlots) {
         if (hotbarProtection.isPresent()) {
             // Player inventory sorting.
-            TerrastorageCore.sortPlayerItems(player.getInventory(), type, hotbarProtection.get());
+            TerrastorageCore.sortPlayerItems(player.getInventory(), type, hotbarProtection.get(), lockedSlots.isPresent() ? lockedSlots.get() : null);
         }
         else {
             // Storage sorting.

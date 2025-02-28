@@ -28,7 +28,8 @@ public record StorageActionPayload(
         Optional<Integer> syncId,
         StorageAction action,
         boolean hotbarProtection,
-        Optional<Boolean> smartDepositMode
+        Optional<Boolean> smartDepositMode,
+        Optional<List<Integer>> lockedSlots
 ) implements CustomPacketPayload {
     public static final Type<StorageActionPayload> ID = new Type<>(ResourceLocation.fromNamespaceAndPath(Reference.MOD_ID, "storage_action"));
     public static final StreamCodec<FriendlyByteBuf, StorageActionPayload> actionCodec = StreamCodec.ofMember(
@@ -37,12 +38,14 @@ public record StorageActionPayload(
                 buf.writeEnum(value.action);
                 buf.writeBoolean(value.hotbarProtection);
                 buf.writeOptional(value.smartDepositMode, FriendlyByteBuf::writeBoolean);
+                buf.writeOptional(value.lockedSlots, (_buf, list) -> _buf.writeCollection(list, FriendlyByteBuf::writeVarInt));
             },
             buf -> new StorageActionPayload(
                     buf.readOptional(FriendlyByteBuf::readInt),
                     buf.readEnum(StorageAction.class),
                     buf.readBoolean(),
-                    buf.readOptional(FriendlyByteBuf::readBoolean)
+                    buf.readOptional(FriendlyByteBuf::readBoolean),
+                    buf.readOptional(_buf -> _buf.readList(FriendlyByteBuf::readVarInt))
             )
     );
     @Override
@@ -57,9 +60,9 @@ public record StorageActionPayload(
      * @param hotbarProtection The hotbar protection value of the player.
      * @param smartDepositMode Whether the player's quick stack mode is 'smart deposit'.
      */
-    public static void receive(ServerPlayer player, Optional<Integer> syncId, StorageAction action, boolean hotbarProtection, Optional<Boolean> smartDepositMode) {
+    public static void receive(ServerPlayer player, Optional<Integer> syncId, StorageAction action, boolean hotbarProtection, Optional<Boolean> smartDepositMode, Optional<List<Integer>> lockedSlots) {
         if (action == StorageAction.QUICK_STACK_TO_NEARBY) {
-            TerrastorageCore.quickStackToNearbyStorages(player, hotbarProtection, smartDepositMode.get());
+            TerrastorageCore.quickStackToNearbyStorages(player, hotbarProtection, smartDepositMode.get(), lockedSlots.get());
         } else if (action == StorageAction.RESTOCK_FROM_NEARBY) {
             TerrastorageCore.restockFromNearbyStorages(player, hotbarProtection);
         } else {
@@ -90,8 +93,8 @@ public record StorageActionPayload(
 
             switch (action) {
                 case LOOT_ALL -> TerrastorageCore.lootAll(player.getInventory(), storageInventory, hotbarProtection);
-                case DEPOSIT_ALL -> TerrastorageCore.depositAll(player.getInventory(), storageInventory, firstSlot, hotbarProtection);
-                case QUICK_STACK -> TerrastorageCore.quickStack(player.getInventory(), storageInventory, hotbarProtection, smartDepositMode.get());
+                case DEPOSIT_ALL -> TerrastorageCore.depositAll(player.getInventory(), storageInventory, firstSlot, hotbarProtection, lockedSlots.get());
+                case QUICK_STACK -> TerrastorageCore.quickStack(player.getInventory(), storageInventory, hotbarProtection, smartDepositMode.get(), lockedSlots.get());
                 case RESTOCK -> TerrastorageCore.restock(player.getInventory(), storageInventory, hotbarProtection);
                 default -> throw new IllegalArgumentException("Unknown storage action: " + action);
             }

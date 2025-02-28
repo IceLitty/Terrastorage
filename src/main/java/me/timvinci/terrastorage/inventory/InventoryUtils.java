@@ -2,6 +2,7 @@ package me.timvinci.terrastorage.inventory;
 
 import compasses.expandedstorage.api.EsChestType;
 import compasses.expandedstorage.api.ExpandedStorageAccessors;
+import me.timvinci.terrastorage.Terrastorage;
 import me.timvinci.terrastorage.config.ConfigManager;
 import me.timvinci.terrastorage.item.GhostItemEntity;
 import me.timvinci.terrastorage.item.StackIdentifier;
@@ -11,7 +12,6 @@ import me.timvinci.terrastorage.api.ItemFavoritingUtils;
 import me.timvinci.terrastorage.util.SortType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.ChestBlock;
-import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
@@ -22,7 +22,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.vehicle.VehicleEntity;
 import net.minecraft.world.CompoundContainer;
 import net.minecraft.world.Container;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerPlayer;
@@ -47,6 +46,7 @@ import java.util.function.Predicate;
  */
 public class InventoryUtils {
     public static boolean expandedStorageLoaded = false;
+    public static boolean inventoryProfilesNextLoaded = false;
 
     /**
      * Transfers a stack from an inventory to another inventory, first attempts to transfer that stack to an existing
@@ -123,7 +123,7 @@ public class InventoryUtils {
      * @param endIndex The index at which item iteration ends.
      * @return A sorted list of items.
      */
-    public static List<ItemStack> combineAndSortInventory(Container inventory, SortType type, int startIndex, int endIndex, boolean ignoreFavorites) {
+    public static List<ItemStack> combineAndSortInventory(Container inventory, SortType type, int startIndex, int endIndex, boolean ignoreFavorites, List<Integer> lockedSlots) {
         List<ItemStack> combinedStacks = new ArrayList<>();
         // Rough estimate for an efficient initial capacity for the lastStackMap.
         int initialCapacity = Math.max(16, (endIndex - startIndex) / 3);
@@ -134,6 +134,10 @@ public class InventoryUtils {
                 ItemStack::isEmpty;
 
         for (int i = startIndex; i < endIndex; i++) {
+//            Terrastorage.LOGGER.debug("[DEBUG] TS SERV CHECK SLOTS {} LOCKED? {} LOCKSIZE {}", i, lockedSlots != null && lockedSlots.contains(i), lockedSlots == null ? -1 : lockedSlots.size());
+            if (lockedSlots != null && lockedSlots.contains(i)) {
+                continue;
+            }
             ItemStack stack = inventory.getItem(i);
             if (shouldSkip.test(stack)) {
                 continue;
@@ -496,10 +500,15 @@ public class InventoryUtils {
      * @param smartDepositMode Whether the player's quick stack mode is 'smart deposit'.
      * @return A consumer that processes an ItemStack according to the provided mode
      */
-    public static StackProcessor createStackProcessor(InventoryState storageInventoryState, Container storageInventory, boolean smartDepositMode) {
+    public static StackProcessor createStackProcessor(InventoryState storageInventoryState, Container storageInventory, boolean smartDepositMode, List<Integer> lockedSlots) {
         return smartDepositMode ?
                 new StackProcessor(
-                        stack -> {
+                        tuple -> {
+                            ItemStack stack = tuple.getA();
+                            Integer slotIndex = tuple.getB();
+                            if (lockedSlots != null && lockedSlots.contains(slotIndex)) {
+                                return false;
+                            }
                             StackIdentifier stackIdentifier = new StackIdentifier(stack);
                             return storageInventoryState.getNonFullItemSlots().containsKey(stackIdentifier) ||
                                     ((ExpandedInventoryState)storageInventoryState).getStoredItems().contains(stackIdentifier) && !storageInventoryState.getEmptySlots().isEmpty();
@@ -507,8 +516,15 @@ public class InventoryUtils {
                         (stack) -> InventoryUtils.transferStack(storageInventory, storageInventoryState, stack)
                 ) :
                 new StackProcessor(
-                        stack -> !stack.isEmpty() &&
-                                storageInventoryState.getNonFullItemSlots().containsKey(new StackIdentifier(stack)),
+                        tuple -> {
+                            ItemStack stack = tuple.getA();
+                            Integer slotIndex = tuple.getB();
+                            if (lockedSlots != null && lockedSlots.contains(slotIndex)) {
+                                return false;
+                            }
+                            return !stack.isEmpty() &&
+                                    storageInventoryState.getNonFullItemSlots().containsKey(new StackIdentifier(stack));
+                        },
                         (stack) -> InventoryUtils.transferToExistingStack(storageInventory, storageInventoryState, stack)
                 );
     }

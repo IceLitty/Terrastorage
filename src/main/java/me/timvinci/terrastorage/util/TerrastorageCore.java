@@ -63,13 +63,13 @@ public class TerrastorageCore {
      * @param firstSlot The first slot of the screen handler of the storage inventory.
      * @param hotbarProtection The hotbar protection value of the player.
      */
-    public static void depositAll(Inventory playerInventory, Container storageInventory, Slot firstSlot, boolean hotbarProtection) {
+    public static void depositAll(Inventory playerInventory, Container storageInventory, Slot firstSlot, boolean hotbarProtection, List<Integer> lockedSlots) {
         // Create an inventory state from the storage's inventory.
         CompleteInventoryState storageInventoryState = new CompleteInventoryState(storageInventory);
 
         for (int i = Inventory.getSelectionSize(); i < playerInventory.items.size(); i++) {
             ItemStack playerStack = playerInventory.getItem(i);
-            if (playerStack.isEmpty() || ItemFavoritingUtils.isFavorite(playerStack) || !firstSlot.mayPlace(playerStack)) {
+            if (playerStack.isEmpty() || ItemFavoritingUtils.isFavorite(playerStack) || !firstSlot.mayPlace(playerStack) || (lockedSlots != null && lockedSlots.contains(i))) {
                 continue;
             }
 
@@ -80,7 +80,7 @@ public class TerrastorageCore {
             for (int i = 0; i < Inventory.getSelectionSize(); i++) {
                 ItemStack playerStack = playerInventory.getItem(i);
 
-                if (playerStack.isEmpty() || ItemFavoritingUtils.isFavorite(playerStack) || !firstSlot.mayPlace(playerStack)) {
+                if (playerStack.isEmpty() || ItemFavoritingUtils.isFavorite(playerStack) || !firstSlot.mayPlace(playerStack) || (lockedSlots != null && lockedSlots.contains(i))) {
                     continue;
                 }
 
@@ -101,16 +101,16 @@ public class TerrastorageCore {
      * @param hotbarProtection The hotbar protection value of the player.
      * @param smartDepositMode Whether the player's quick stack mode is 'smart deposit'.
      */
-    public static void quickStack(Inventory playerInventory, Container storageInventory, boolean hotbarProtection, boolean smartDepositMode) {
+    public static void quickStack(Inventory playerInventory, Container storageInventory, boolean hotbarProtection, boolean smartDepositMode, List<Integer> lockedSlots) {
         InventoryState storageInventoryState = smartDepositMode ?
                 new ExpandedInventoryState(storageInventory) :
                 new CompactInventoryState(storageInventory);
 
-        StackProcessor processor = InventoryUtils.createStackProcessor(storageInventoryState, storageInventory, smartDepositMode);
+        StackProcessor processor = InventoryUtils.createStackProcessor(storageInventoryState, storageInventory, smartDepositMode, lockedSlots);
 
         int startIndex = hotbarProtection ? Inventory.getSelectionSize() : 0;
         for (int i = startIndex; i < playerInventory.items.size(); i++) {
-            processor.tryProcess(playerInventory.getItem(i));
+            processor.tryProcess(playerInventory.getItem(i), i);
         }
 
         if (storageInventoryState.wasModified()) {
@@ -152,7 +152,7 @@ public class TerrastorageCore {
      * @param type The sorting type of the player.
      */
     public static void sortStorageItems(Container storageInventory, SortType type) {
-        List<ItemStack> sortedStacks = InventoryUtils.combineAndSortInventory(storageInventory, type, 0, storageInventory.getContainerSize(), false);
+        List<ItemStack> sortedStacks = InventoryUtils.combineAndSortInventory(storageInventory, type, 0, storageInventory.getContainerSize(), false, null);
 
         int slotIndex = 0;
         for (ItemStack stack : sortedStacks) {
@@ -236,8 +236,8 @@ public class TerrastorageCore {
      * @param type The sorting type of the player.
      * @param hotbarProtection The hotbar protection value of the player.
      */
-    public static void sortPlayerItems(Inventory playerInventory, SortType type, boolean hotbarProtection) {
-        List<ItemStack> sortedList = InventoryUtils.combineAndSortInventory(playerInventory, type, hotbarProtection ? Inventory.getSelectionSize() : 0, playerInventory.items.size(), true);
+    public static void sortPlayerItems(Inventory playerInventory, SortType type, boolean hotbarProtection, List<Integer> lockedSlots) {
+        List<ItemStack> sortedList = InventoryUtils.combineAndSortInventory(playerInventory, type, hotbarProtection ? Inventory.getSelectionSize() : 0, playerInventory.items.size(), true, lockedSlots);
         ArrayDeque<ItemStack> sortedStacks = new ArrayDeque<>(sortedList);
 
         int slotIndex = Inventory.getSelectionSize();
@@ -267,7 +267,7 @@ public class TerrastorageCore {
      * @param hotbarProtection The player's hotbar protection value.
      * @param smartDepositMode Whether the player's quick stack mode is 'smart deposit'.
      */
-    public static void quickStackToNearbyStorages(ServerPlayer player, boolean hotbarProtection, boolean smartDepositMode) {
+    public static void quickStackToNearbyStorages(ServerPlayer player, boolean hotbarProtection, boolean smartDepositMode, List<Integer> lockedSlots) {
         List<Tuple<Container, Vec3>> nearbyStorages = InventoryUtils.getNearbyStorages(player);
         if (nearbyStorages.isEmpty()) {
             return;
@@ -283,16 +283,19 @@ public class TerrastorageCore {
         for (Tuple<Container, Vec3> storagePair : nearbyStorages) {
             Container storage = storagePair.getA();
             Vec3 storagePos = storagePair.getB();
-
+            Set<Item> addAnimationItems = new HashSet<>();
             InventoryState storageState = stateFactory.apply(storage);
-            StackProcessor processor = InventoryUtils.createStackProcessor(storageState, storage, smartDepositMode);
+            StackProcessor processor = InventoryUtils.createStackProcessor(storageState, storage, smartDepositMode, lockedSlots);
 
             for (int i = startIndex; i < playerInventory.items.size(); i++) {
                 ItemStack playerStack = playerInventory.getItem(i);
                 Item playerItem = playerStack.getItem();
-                if (processor.tryProcess(playerStack)) {
-                    animationMap.computeIfAbsent(storagePos, k -> new ArrayList<>()).add(playerItem);
+                if (processor.tryProcess(playerStack, i)) {
+                    addAnimationItems.add(playerItem);
                 }
+            }
+            for (Item animationItem : addAnimationItems) {
+                animationMap.computeIfAbsent(storagePos, k -> new ArrayList<>()).add(animationItem);
             }
 
             if (storageState.wasModified()) {
