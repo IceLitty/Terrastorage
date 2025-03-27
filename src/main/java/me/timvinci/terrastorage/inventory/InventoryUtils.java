@@ -2,8 +2,11 @@ package me.timvinci.terrastorage.inventory;
 
 import compasses.expandedstorage.api.EsChestType;
 import compasses.expandedstorage.api.ExpandedStorageAccessors;
-import me.timvinci.terrastorage.Terrastorage;
 import me.timvinci.terrastorage.config.ConfigManager;
+import me.timvinci.terrastorage.integration.chestwithlegs.ChesterEntityAccessors;
+import me.timvinci.terrastorage.integration.netherchest.NetherChestAccessors;
+import me.timvinci.terrastorage.integration.sophisticatedcore.StorageAccessors;
+import me.timvinci.terrastorage.integration.sophisticatedstorageinmotion.StorageMotionAccessors;
 import me.timvinci.terrastorage.item.GhostItemEntity;
 import me.timvinci.terrastorage.item.StackIdentifier;
 import me.timvinci.terrastorage.item.StackProcessor;
@@ -47,6 +50,11 @@ import java.util.function.Predicate;
 public class InventoryUtils {
     public static boolean expandedStorageLoaded = false;
     public static boolean inventoryProfilesNextLoaded = false;
+    public static boolean sophisticatedCoreLoaded = false;
+    public static boolean sophisticatedStorageLoaded = false;
+    public static boolean sophisticatedStorageInMotionLoaded = false;
+    public static boolean netherChestedLoaded = false;
+    public static boolean chestWithLegsLoaded = false;
 
     /**
      * Transfers a stack from an inventory to another inventory, first attempts to transfer that stack to an existing
@@ -92,7 +100,20 @@ public class InventoryUtils {
             int slotWithItem = slotsIterator.next();
             ItemStack existingStack = to.getItem(slotWithItem);
 
-            int spaceLeft = existingStack.getMaxStackSize() - existingStack.getCount();
+            Integer maxStackSize = null;
+            if (sophisticatedCoreLoaded) {
+                maxStackSize = StorageAccessors.getMaxStackSize(to, slotWithItem);
+            }
+            if (maxStackSize == null && netherChestedLoaded) {
+                maxStackSize = NetherChestAccessors.getMaxStackSize(to, slotWithItem);
+            }
+            if (maxStackSize == null && chestWithLegsLoaded) {
+                maxStackSize = ChesterEntityAccessors.getMaxStackSize(to, slotWithItem);
+            }
+            if (maxStackSize == null) {
+                maxStackSize = existingStack.getMaxStackSize();
+            }
+            int spaceLeft = maxStackSize - existingStack.getCount();
             int transferAmount;
             // Check if the about to be combined stack will be a full stack.
             if (spaceLeft <= stackToTransfer.getCount()) {
@@ -267,27 +288,91 @@ public class InventoryUtils {
                 else {
                     nearbyStorages.add(new Tuple<>(inventory, losPoint));
                 }
+            } else {
+                boolean noHandle = true;
+                if (sophisticatedCoreLoaded) {
+                    Container inventory = StorageAccessors.turnStorage(blockEntity);
+                    if (inventory != null) {
+                        noHandle = false;
+                        Vec3 losPoint;
+                        if (performLosCheck) {
+                            losPoint = hasLineOfSight(player, world, pos);
+                            // Return if the player doesn't have line of sight to the block entity.
+                            if (losPoint == Vec3.ZERO) {
+                                return;
+                            }
+                        } else {
+                            losPoint = pos.getCenter();
+                        }
+                        nearbyStorages.add(new Tuple<>(inventory, losPoint));
+                    }
+                }
+                if (noHandle && netherChestedLoaded) {
+                    Container inventory = NetherChestAccessors.turnStorage(blockEntity);
+                    if (inventory != null) {
+                        Vec3 losPoint;
+                        if (performLosCheck) {
+                            losPoint = hasLineOfSight(player, world, pos);
+                            // Return if the player doesn't have line of sight to the block entity.
+                            if (losPoint == Vec3.ZERO) {
+                                return;
+                            }
+                        } else {
+                            losPoint = pos.getCenter();
+                        }
+                        nearbyStorages.add(new Tuple<>(inventory, losPoint));
+                    }
+                }
             }
         });
 
         AABB searchBox = new AABB(playerPos).inflate(range);
         world.getEntities(EntityTypeTest.forClass(VehicleEntity.class), searchBox, entity ->
-        entity instanceof Container inventory && inventory.getContainerSize() >= 27)
+        entity instanceof Container inventory)
             .forEach(entity -> {
-                Vec3 losPoint;
-                if (performLosCheck) {
-                    losPoint = hasLineOfSightToEntity(player, world, entity);
-                    if (losPoint == Vec3.ZERO) {
-                        return;
+                Container container = (Container) entity;
+                boolean notSkip = true;
+                if (container.getContainerSize() < 27) {
+                    if (sophisticatedStorageInMotionLoaded) {
+                        // support limited storage boat
+                        notSkip = StorageMotionAccessors.isMotionEntity(entity);
+                    } else {
+                        notSkip = false;
                     }
                 }
-                else {
-                    losPoint = entity.getBoundingBox().getCenter();
+                if (notSkip) {
+                    Vec3 losPoint;
+                    if (performLosCheck) {
+                        losPoint = hasLineOfSightToEntity(player, world, entity);
+                        if (losPoint == Vec3.ZERO) {
+                            return;
+                        }
+                    }
+                    else {
+                        losPoint = entity.getBoundingBox().getCenter();
+                    }
+                    nearbyStorages.add(new Tuple<>(container, losPoint));
                 }
-
-                nearbyStorages.add(new Tuple<>((Container) entity, losPoint));
             }
         );
+        if (chestWithLegsLoaded) {
+            world.getEntities(null, searchBox).forEach(entity -> {
+                Container container = ChesterEntityAccessors.turnStorage(entity);
+                if (container != null) {
+                    Vec3 losPoint;
+                    if (performLosCheck) {
+                        losPoint = hasLineOfSightToEntity(player, world, entity);
+                        if (losPoint == Vec3.ZERO) {
+                            return;
+                        }
+                    }
+                    else {
+                        losPoint = entity.getBoundingBox().getCenter();
+                    }
+                    nearbyStorages.add(new Tuple<>(container, losPoint));
+                }
+            });
+        }
 
         return nearbyStorages;
     }

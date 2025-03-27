@@ -113,6 +113,23 @@ dependencies {
     // Inventory Profiles Next compatibility.
 	compileOnly "org.anti_ad.mc:libIPN-neoforge-1.21:6.0.0:dev"
 	compileOnly "org.anti_ad.mc:InventoryProfilesNext-neoforge-1.21:2.0.3"
+	// sopthisticated storage compatibility
+//	implementation "curse.maven:sophisticated-core-618298:6317050"
+//	implementation "curse.maven:sophisticated-storage-619320:6303389"
+//	implementation "curse.maven:sophisticated-backpacks-422301:6303380"
+	implementation "curse.maven:sophisticated-core-618298:6214886"
+	implementation "curse.maven:sophisticated-storage-619320:6194158"
+	implementation "curse.maven:sophisticated-backpacks-422301:6194170"
+	implementation "curse.maven:sophisticated-storage-in-motion-1166930:6270431"
+	// nether chest compatibility
+//	implementation "curse.maven:puzzles-lib-495476:6311123"
+	implementation "curse.maven:puzzles-lib-495476:6283540"
+	implementation "curse.maven:new-nether-chest-857971:5733766"
+	compileOnly "libs:limitlesscontainers:neoforge-21.1.0"
+	// chest with legs compatibility
+//	implementation "curse.maven:geckolib-388172:6304958"
+	implementation "curse.maven:geckolib-388172:6027599"
+	implementation "maven.modrinth:chest-with-legs:jm6Tf76l"
 }
 
 tasks.register("extractNightConfig", Copy) {

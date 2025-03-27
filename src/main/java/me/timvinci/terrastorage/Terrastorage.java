@@ -56,6 +56,21 @@ public class Terrastorage implements ModInitializer {
 		if (FabricLoader.getInstance().isModLoaded("inventoryprofilesnext")) {
 			InventoryUtils.inventoryProfilesNextLoaded = true;
 		}
+		if (FabricLoader.getInstance().isModLoaded("sophisticatedcore")) {
+			InventoryUtils.sophisticatedCoreLoaded = true;
+		}
+		if (FabricLoader.getInstance().isModLoaded("sophisticatedstorage")) {
+			InventoryUtils.sophisticatedStorageLoaded = true;
+		}
+		if (FabricLoader.getInstance().isModLoaded("sophisticatedstorageinmotion")) {
+			InventoryUtils.sophisticatedStorageInMotionLoaded = true;
+		}
+		if (FabricLoader.getInstance().isModLoaded("netherchested")) {
+			InventoryUtils.netherChestedLoaded = true;
+		}
+		if (FabricLoader.getInstance().isModLoaded("chest_with_legs")) {
+			InventoryUtils.chestWithLegsLoaded = true;
+		}
 
 		ConfigManager.init();
 		TerrastorageCommands.registerCommands();

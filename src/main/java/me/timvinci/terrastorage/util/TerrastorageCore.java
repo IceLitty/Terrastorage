@@ -2,6 +2,7 @@ package me.timvinci.terrastorage.util;
 
 import me.timvinci.terrastorage.api.ItemFavoritingUtils;
 import me.timvinci.terrastorage.config.ConfigManager;
+import me.timvinci.terrastorage.integration.sophisticatedstorage.StorageBlockAccessors;
 import me.timvinci.terrastorage.inventory.*;
 import me.timvinci.terrastorage.item.StackIdentifier;
 import me.timvinci.terrastorage.item.StackProcessor;
@@ -21,6 +22,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
@@ -221,6 +223,20 @@ public class TerrastorageCore {
             NetworkHandler.sendGlobalBlockRenamedPayload(player.serverLevel(), lockableContainerBlockEntity.getBlockPos(), newCustomName == null ? "" : newCustomName.getString());
             factory = lockableContainerBlockEntity.getBlockState().getMenuProvider(player.level(), lockableContainerBlockEntity.getBlockPos());
         }
+        else if (InventoryUtils.sophisticatedStorageLoaded) {
+            BlockEntity blockEntity = StorageBlockAccessors.getBlockEntity(player.containerMenu);
+            if (blockEntity == null) {
+                player.sendSystemMessage(Component.literal("The storage you tried to rename is currently unsupported by Terrastorage."));
+                return;
+            }
+            if (!StorageBlockAccessors.setCustomName(blockEntity, newCustomName)) {
+                player.sendSystemMessage(Component.literal("The storage you tried to rename is currently unsupported by Terrastorage."));
+                return;
+            }
+            containerInventory.setChanged();
+            NetworkHandler.sendGlobalBlockRenamedPayload(player.serverLevel(), blockEntity.getBlockPos(), newCustomName == null ? "" : newCustomName.getString());
+            factory = blockEntity.getBlockState().getMenuProvider(player.level(), blockEntity.getBlockPos());
+        }
         else {
             player.sendSystemMessage(Component.literal("The storage you tried to rename is currently unsupported by Terrastorage."));
             return;
@@ -340,9 +356,8 @@ public class TerrastorageCore {
                     continue;
                 }
                 Item playerItem = storageStack.getItem();
-                if (InventoryUtils.transferToExistingStack(playerInventory, playerInventoryState, storageStack)) {
-                    addAnimationItems.add(playerItem);
-                }
+                InventoryUtils.transferToExistingStack(playerInventory, playerInventoryState, storageStack);
+                addAnimationItems.add(playerItem);
             }
             for (Item animationItem : addAnimationItems) {
                 animationMap.computeIfAbsent(storagePos, k -> new ArrayList<>()).add(animationItem);
