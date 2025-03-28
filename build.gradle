@@ -130,6 +130,10 @@ dependencies {
 //	implementation "curse.maven:geckolib-388172:6304958"
 	implementation "curse.maven:geckolib-388172:6027599"
 	implementation "maven.modrinth:chest-with-legs:jm6Tf76l"
+	// snowy spirit compatibility
+//	implementation "curse.maven:selene-499980:6324921"
+	implementation "curse.maven:selene-499980:6106442"
+	implementation "curse.maven:snowy-spirit-566142:5983882"
 }
 
 tasks.register("extractNightConfig", Copy) {

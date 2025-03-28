@@ -5,6 +5,7 @@ import compasses.expandedstorage.api.ExpandedStorageAccessors;
 import me.timvinci.terrastorage.config.ConfigManager;
 import me.timvinci.terrastorage.integration.chestwithlegs.ChesterEntityAccessors;
 import me.timvinci.terrastorage.integration.netherchest.NetherChestAccessors;
+import me.timvinci.terrastorage.integration.snowyspirit.SnowySpiritAccessors;
 import me.timvinci.terrastorage.integration.sophisticatedcore.StorageAccessors;
 import me.timvinci.terrastorage.integration.sophisticatedstorageinmotion.StorageMotionAccessors;
 import me.timvinci.terrastorage.item.GhostItemEntity;
@@ -55,6 +56,7 @@ public class InventoryUtils {
     public static boolean sophisticatedStorageInMotionLoaded = false;
     public static boolean netherChestedLoaded = false;
     public static boolean chestWithLegsLoaded = false;
+    public static boolean snowySpiritLoaded = false;
 
     /**
      * Transfers a stack from an inventory to another inventory, first attempts to transfer that stack to an existing
@@ -109,6 +111,9 @@ public class InventoryUtils {
             }
             if (maxStackSize == null && chestWithLegsLoaded) {
                 maxStackSize = ChesterEntityAccessors.getMaxStackSize(to, slotWithItem);
+            }
+            if (maxStackSize == null && snowySpiritLoaded) {
+                maxStackSize = SnowySpiritAccessors.getMaxStackSize(to, slotWithItem);
             }
             if (maxStackSize == null) {
                 maxStackSize = existingStack.getMaxStackSize();
@@ -355,9 +360,15 @@ public class InventoryUtils {
                 }
             }
         );
-        if (chestWithLegsLoaded) {
+        if (chestWithLegsLoaded || snowySpiritLoaded) {
             world.getEntities(null, searchBox).forEach(entity -> {
-                Container container = ChesterEntityAccessors.turnStorage(entity);
+                Container container = null;
+                if (chestWithLegsLoaded) {
+                    container = ChesterEntityAccessors.turnStorage(entity);
+                }
+                if (container == null && snowySpiritLoaded) {
+                    container = SnowySpiritAccessors.turnStorage(entity);
+                }
                 if (container != null) {
                     Vec3 losPoint;
                     if (performLosCheck) {

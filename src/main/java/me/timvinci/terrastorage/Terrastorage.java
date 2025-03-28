@@ -71,6 +71,9 @@ public class Terrastorage implements ModInitializer {
 		if (FabricLoader.getInstance().isModLoaded("chest_with_legs")) {
 			InventoryUtils.chestWithLegsLoaded = true;
 		}
+		if (FabricLoader.getInstance().isModLoaded("snowyspirit")) {
+			InventoryUtils.snowySpiritLoaded = true;
+		}
 
 		ConfigManager.init();
 		TerrastorageCommands.registerCommands();

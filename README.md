@@ -16,3 +16,4 @@ Integration expand support with these mods:
 - `Sophisticated Core 1.3.3`
 - `Sophisticated Storage 1.4.0`
 - `Sophisticated Stroage In Motion 0.10.5`
+- `Snowy Spirit 3.0.16`
